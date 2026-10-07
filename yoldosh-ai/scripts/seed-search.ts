@@ -1,3 +1,5 @@
+// Demo simulyatsiyani kalibrlash: turli seedlarda asosiy ko'rsatkichlarni chiqaradi.
+// Foydalanish: npx tsx scripts/seed-search.ts 2026 7 11
 import { createPGlite } from '../src/server/db/client';
 import { migrate } from '../src/server/db';
 import { seedDemo } from '../src/server/demo/seed';

@@ -10,7 +10,7 @@ import { scoreChurn, scoreOpenLeads } from '../brain/scoring';
 import { listRules } from '../context/rules';
 import { decisionHistory, learningStats } from '../feedback/outcomes';
 import * as q from '../metrics/queries';
-import { comparisonRanges, pctChange, round } from '../lib/util';
+import { comparisonRanges, now, pctChange, round } from '../lib/util';
 import type { AgentTool } from './llm';
 
 /**
@@ -191,7 +191,7 @@ export function salesTools(env: ToolEnv): AgentTool[] {
       inputSchema: z.object({ hours: z.number().min(0.25).max(240).default(2) }),
       label: (i) => `Javobsiz leadlar (${i.hours}+ soat)`,
       run: async (i) => {
-        const rows = await q.unansweredLeads(env.db, env.businessId, i.hours, new Date());
+        const rows = await q.unansweredLeads(env.db, env.businessId, i.hours, now());
         const by = (k: (r: q.UnansweredLead) => string) => rows.reduce<Record<string, number>>((m, r) => ((m[k(r)] = (m[k(r)] ?? 0) + 1), m), {});
         return {
           count: rows.length,
@@ -222,7 +222,7 @@ export function salesTools(env: ToolEnv): AgentTool[] {
       description: "Sababiy dalil: birinchi javob tezligi bo'yicha lead → sotuv konversiyasi (so'nggi 90 kun, yetilgan leadlar).",
       inputSchema: z.object({ segment: z.string().optional() }),
       label: (i) => `Javob tezligi va konversiya${i.segment ? ` (${i.segment})` : ''}`,
-      run: async (i) => (await q.conversionByResponseBucket(env.db, env.businessId, new Date(), { segment: i.segment })).map((b) => ({ bucket: b.bucket, leads: b.leads, won: b.won, conversion: r2(b.conversion, 3) })),
+      run: async (i) => (await q.conversionByResponseBucket(env.db, env.businessId, now(), { segment: i.segment })).map((b) => ({ bucket: b.bucket, leads: b.leads, won: b.won, conversion: r2(b.conversion, 3) })),
     }),
     tool({
       name: 'get_hot_leads',
@@ -260,7 +260,7 @@ export function financeTools(env: ToolEnv): AgentTool[] {
       inputSchema: z.object({ min_days: z.number().int().min(0).max(120).default(3) }),
       label: () => "Kechikkan to'lovlar",
       run: async (i) => {
-        const rows = await q.overduePayments(env.db, env.businessId, new Date(), i.min_days);
+        const rows = await q.overduePayments(env.db, env.businessId, now(), i.min_days);
         return {
           count: rows.length,
           total: rows.reduce((a, r) => a + r.amount, 0),
@@ -279,7 +279,7 @@ export function financeTools(env: ToolEnv): AgentTool[] {
         const [mk, price, tenure, churn] = await Promise.all([
           q.marketingTotals(env.db, env.businessId, current),
           q.avgMonthlyPrice(env.db, env.businessId),
-          q.avgTenureMonths(env.db, env.businessId, new Date()),
+          q.avgTenureMonths(env.db, env.businessId, now()),
           q.churnStats(env.db, env.businessId, current),
         ]);
         const expectedTenure = churn.monthlyChurnRate > 0 ? 1 / churn.monthlyChurnRate : tenure;

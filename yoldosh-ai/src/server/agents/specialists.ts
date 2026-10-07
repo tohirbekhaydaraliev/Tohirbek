@@ -1,3 +1,4 @@
+import { now } from '../lib/util';
 import { runAgent, type AgentEvent, type AgentTool } from './llm';
 import { commonTools, customerTools, financeTools, marketingTools, operationsTools, salesTools, type ToolEnv } from './tools';
 
@@ -68,7 +69,7 @@ export async function consultSpecialist(
   onEvent?: (e: AgentEvent) => void,
 ): Promise<string> {
   const spec = SPECIALISTS[name];
-  const today = new Date().toISOString().slice(0, 10);
+  const today = now().toISOString().slice(0, 10);
   const res = await runAgent({
     agent: spec.title,
     system: spec.system,

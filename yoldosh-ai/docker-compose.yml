@@ -1,0 +1,32 @@
+# Production uchun: Yo'ldosh AI + PostgreSQL
+#   cp .env.example .env   # kalitlarni to'ldiring
+#   docker compose up -d --build
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://yoldosh:yoldosh@db:5432/yoldosh
+    ports:
+      - '8787:8787'
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: yoldosh
+      POSTGRES_PASSWORD: yoldosh
+      POSTGRES_DB: yoldosh
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U yoldosh']
+      interval: 5s
+      retries: 10
+
+volumes:
+  pgdata:

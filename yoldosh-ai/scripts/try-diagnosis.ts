@@ -1,3 +1,5 @@
+// Diagnostika engine natijasini (KPI daraxti, root cause, tavsiyalar, qoidalar) konsolda ko'rish.
+// Foydalanish: npx tsx scripts/try-diagnosis.ts
 import { createPGlite } from '../src/server/db/client';
 import { migrate } from '../src/server/db';
 import { seedDemo } from '../src/server/demo/seed';

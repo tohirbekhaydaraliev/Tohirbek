@@ -133,7 +133,15 @@ export function buildRevenueTree(data: DiagnosisData): TreeNode {
     const prev = data.leadSources.prev.find((s) => s.key === k)?.leads ?? 0;
     return attachContribution(leads, makeNode(`funnel.leads.${k}`, k, 'count', cur, prev, 'sum'), cur - prev);
   });
-  leads.children.push(...srcNodes.sort((a, b) => Math.abs(b.contribution ?? 0) - Math.abs(a.contribution ?? 0)).slice(0, 7));
+  srcNodes.sort((a, b) => Math.abs(b.contribution ?? 0) - Math.abs(a.contribution ?? 0));
+  leads.children.push(...srcNodes.slice(0, 7));
+  // Qolgan kichik manbalar bitta tugunga jamlanadi (hissalar yig'indisi ota o'zgarishiga teng qolishi uchun)
+  const rest = srcNodes.slice(7);
+  if (rest.length) {
+    const cur = rest.reduce((a, n) => a + n.current, 0);
+    const prev = rest.reduce((a, n) => a + n.previous, 0);
+    leads.children.push(attachContribution(leads, makeNode('funnel.leads.other', `Boshqa manbalar (${rest.length})`, 'count', cur, prev, 'sum'), cur - prev));
+  }
 
   // Konversiya segmentlar bo'yicha: stavka effekti (joriy ulush × stavka o'zgarishi) + miks effekti
   let rateEffectSum = 0;
@@ -153,7 +161,7 @@ export function buildRevenueTree(data: DiagnosisData): TreeNode {
     addSegmentDrivers(segNode, s.segment, data);
   }
   const mix = tc.conversion - tp.conversion - rateEffectSum;
-  if (Math.abs(mix) > 0.002) {
+  if (Math.abs(mix) > 1e-9) {
     conv.children.push(attachContribution(conv, makeNode('funnel.conversion.mix', 'Segment miksi effekti', 'ratio', mix, 0, 'sum', 'up', { status: 'ok' }), mix));
   }
   conv.children.sort((a, b) => (a.contribution ?? 0) - (b.contribution ?? 0));
