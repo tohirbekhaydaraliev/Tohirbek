@@ -171,7 +171,8 @@ async function proposalsFor(ctx: BrainContext, rule: BusinessRule, f: DetectedFi
     case 'payment_overdue:send_payment_reminder': {
       const paymentIds = await fresh('paymentIds', f.entityIds);
       if (paymentIds.length) {
-        out.push({ ...base, type: 'send_payment_reminder', title: `${paymentIds.length} ta kechikkan to'lov bo'yicha eslatma`, params: { paymentIds: paymentIds.slice(0, 60) }, dedupeKey: `rule:${rule.id}:${hash(paymentIds)}` });
+        const ids = paymentIds.slice(0, 100);
+        out.push({ ...base, type: 'send_payment_reminder', title: `${ids.length} ta kechikkan to'lov bo'yicha eslatma`, params: { paymentIds: ids }, dedupeKey: `rule:${rule.id}:${hash(ids)}` });
       }
       break;
     }

@@ -466,7 +466,9 @@ export async function buildRecommendations(
   const cacFindings = byDetector('cac_above_target').filter((f) => (f.metrics as any).cause !== 'sales');
   for (const cac of cacFindings.sort((a, b) => b.impact - a.impact).slice(0, 2)) {
     const m = cac.metrics as any;
-    if ((m.change ?? 0) > 0.2 && (m.cplChange ?? 0) > 0.15 && m.dailyBudget) {
+    // Reklama samaradorligi pasaygan (CPL o'sgan yoki lead sifati tushgan) — byudjetni qisqartirish mantiqli
+    const adInefficiency = (m.cplChange ?? 0) > 0.1 || (m.convChange ?? 0) < -0.2;
+    if ((m.change ?? 0) > 0.2 && adInefficiency && m.dailyBudget) {
       // Qaror tarixi: shu kampaniya byudjeti yaqinda o'zgartirilganmi va natijasi qanday bo'lgan?
       const past = await ctx.db.one<{ executed_at: Date; params: any; verdict: string | null }>(
         `SELECT a.executed_at, a.params, o.verdict FROM actions a LEFT JOIN outcomes o ON o.action_id = a.id
@@ -502,10 +504,11 @@ export async function buildRecommendations(
 
   const overdue = byDetector('payment_overdue')[0];
   if (overdue) {
+    const paymentIds = overdue.entityIds.slice(0, 100);
     recs.push({
-      title: `${overdue.entityIds.length} ta kechikkan to'lov bo'yicha eslatma`,
+      title: `${paymentIds.length} ta kechikkan to'lov bo'yicha eslatma`,
       actionType: 'send_payment_reminder',
-      params: { paymentIds: overdue.entityIds.slice(0, 60) },
+      params: { paymentIds },
       rationale: overdue.title,
       expectedImpact: `${fmtMoney(overdue.impact * 0.5)} gacha undirish`,
       baseConfidence: 0.6,

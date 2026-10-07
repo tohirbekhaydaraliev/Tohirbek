@@ -26,7 +26,7 @@ export interface AgentTool<I = any> {
 }
 
 export interface AgentEvent {
-  type: 'agent_start' | 'agent_end' | 'tool' | 'text' | 'error';
+  type: 'agent_start' | 'agent_end' | 'tool' | 'text' | 'text_reset' | 'error';
   agent: string;
   label?: string;
   text?: string;
@@ -151,6 +151,8 @@ export async function runAgent(opts: {
       break;
     }
     if (message.stop_reason === 'max_tokens') throw new Error('Javob max_tokens chegarasida kesildi');
+    // Tool chaqiruvidan oldingi oraliq matn yakuniy javob emas — UI uni tozalaydi
+    if (opts.streamText) emit({ type: 'text_reset', agent: opts.agent });
 
     const results: Anthropic.Beta.BetaToolResultBlockParam[] = await Promise.all(
       toolUses.map(async (tu): Promise<Anthropic.Beta.BetaToolResultBlockParam> => {
