@@ -198,7 +198,7 @@ function addSegmentDrivers(segNode: TreeNode, segment: string, data: DiagnosisDa
     for (const b of ev.buckets) {
       if (b.leads < 5) continue;
       segNode.children.push(
-        makeNode(`evidence.bucket.${segment}.${b.ord}`, `Javob ${b.bucket} → konversiya`, 'ratio', b.conversion, b.conversion, 'evidence', 'up', {
+        makeNode(`evidence.bucket.${segment}.${b.ord}`, `${b.ord === 5 ? b.bucket : `Javob ${b.bucket}`} → konversiya`, 'ratio', b.conversion, b.conversion, 'evidence', 'up', {
           change: null,
           status: 'ok',
           note: `${b.leads} lead, ${b.won} sotuv (so'nggi 90 kun)`,

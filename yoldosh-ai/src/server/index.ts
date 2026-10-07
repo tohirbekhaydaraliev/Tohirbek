@@ -30,8 +30,12 @@ async function main() {
   if (existsSync(WEB_DIR)) {
     app.use('/assets/*', serveStatic({ root: WEB_DIR }));
     app.use('/favicon.svg', serveStatic({ root: WEB_DIR }));
-    const indexHtml = readFileSync(`${WEB_DIR}/index.html`, 'utf8');
-    app.get('*', (c) => (c.req.path.startsWith('/api/') ? c.json({ error: 'Topilmadi' }, 404) : c.html(indexHtml)));
+    // index.html har so'rovda o'qiladi (kichik fayl) — qayta build'dan keyin ham eski asset'larga ishora qilmaydi
+    app.get('*', (c) =>
+      c.req.path.startsWith('/api/') || c.req.path.startsWith('/assets/')
+        ? c.json({ error: 'Topilmadi' }, 404)
+        : c.html(readFileSync(`${WEB_DIR}/index.html`, 'utf8')),
+    );
   }
 
   const stopScheduler = config.schedulerEnabled ? startScheduler(db) : () => {};
