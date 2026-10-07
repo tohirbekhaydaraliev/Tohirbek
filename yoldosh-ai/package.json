@@ -1,0 +1,48 @@
+{
+  "name": "yoldosh-ai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Yo'ldosh AI — AI Business Operating Agent",
+  "type": "module",
+  "engines": {
+    "node": ">=20.10"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n server,web -c cyan,magenta \"npm:dev:server\" \"npm:dev:web\"",
+    "dev:server": "tsx watch --clear-screen=false src/server/index.ts",
+    "dev:web": "vite",
+    "build": "npm run build:web && npm run build:server",
+    "build:web": "vite build",
+    "build:server": "esbuild src/server/index.ts --bundle --platform=node --format=esm --packages=external --target=node20 --outfile=dist/server/index.js",
+    "start": "node dist/server/index.js",
+    "seed": "tsx src/server/cli.ts seed",
+    "diagnose": "tsx src/server/cli.ts diagnose",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0",
+    "@electric-sql/pglite": "^0.5.8",
+    "@hono/node-server": "^2.1.3",
+    "croner": "^10.0.1",
+    "hono": "^4.13.13",
+    "pg": "^8.23.1",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "concurrently": "^10.0.5",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.3",
+    "vitest": "^5.0.3"
+  }
+}
