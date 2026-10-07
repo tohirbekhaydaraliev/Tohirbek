@@ -560,7 +560,8 @@ export async function seedDemo(db: Db, opts: SeedOptions = {}): Promise<string> 
   // Yoshi barqaror holat taqsimotidan olinadi (eksponensial, o'rtacha = 1/churn oy)
   for (const p of PRODUCTS) {
     for (let i = 0; i < p.baseStudents; i++) {
-      const ageDays = Math.min(330, 5 - Math.log(1 - rng.next()) * (30 / p.monthlyChurn));
+      // Juda uzoq muddatlilar modulo bilan yoyiladi (bir kunga to'planib qolmasligi uchun)
+      const ageDays = 5 + ((-Math.log(1 - rng.next()) * (30 / p.monthlyChurn)) % 325);
       const startedAt = addDays(dayStart(-HISTORY_DAYS), -ageDays);
       const name = randomName();
       const customerId = addCustomer(name, randomPhone(), rng.pick(['referral', 'website', 'instagram', 'walk_in']), startedAt, null);
@@ -616,9 +617,9 @@ export async function seedDemo(db: Db, opts: SeedOptions = {}): Promise<string> 
       }
       if (s.atRisk) {
         if (d > -lastSeenGap) p = 0;
-        else if (d > -21) p = s.customerId === aliCustomer ? 0.85 : 0.3;
+        else if (d > -21) p = 0.3;
       }
-      if (s.customerId === aliCustomer && d <= -lastSeenGap) p = 0.9;
+      if (s.customerId === aliCustomer) p = d > -lastSeenGap ? 0 : d > -12 ? 0.5 : 0.92;
       attendance.push([businessId, s.customerId, s.groupId, isoDate(new Date(date.getTime() + TZ_OFFSET_HOURS * HOUR)), rng.chance(p)]);
     }
   }

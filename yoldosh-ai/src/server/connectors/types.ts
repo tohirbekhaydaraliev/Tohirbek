@@ -145,6 +145,8 @@ export interface WebhookResult {
   eventType?: string;
   /** Maxsus ishlov (masalan Telegram bot xabari) — ingest'dan tashqari */
   handled?: boolean;
+  /** Ilova qatlamiga uzatiladigan xom ma'lumot (masalan Telegram update) */
+  payload?: unknown;
 }
 
 export interface ConnectorDefinition extends Omit<ConnectorTypeInfo, 'configFields'> {
