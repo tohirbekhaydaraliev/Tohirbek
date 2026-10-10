@@ -1,0 +1,19 @@
+# VPS uchun systemd xizmati. Nusxalash:
+#   sudo cp deploy/edinbur-bot.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now edinbur-bot
+# User va yo'llarni o'zingiznikiga moslang.
+
+[Unit]
+Description=Edinbur School Telegram AI bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=edinbur
+WorkingDirectory=/home/edinbur/Tohirbek/edinbur-bot
+ExecStart=/home/edinbur/Tohirbek/edinbur-bot/.venv/bin/python -m bot
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
