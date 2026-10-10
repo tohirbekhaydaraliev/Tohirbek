@@ -46,4 +46,4 @@
 ## Ish vaqti va aloqa
 - Ish vaqti: 8:00 dan 17:00 gacha
 - Ish kunlari: [TO'LDIRING]
-- Telefon: [TO'LDIRING]
+- Telefon: +998 70 325 07 73
