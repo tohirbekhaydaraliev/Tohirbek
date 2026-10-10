@@ -36,7 +36,7 @@
 - Narxlar operator bilan gaplashganda (sotuv vaqtida) aytiladi.
 
 ## Jadval va dars vaqtlari
-- [TO'LDIRING]
+- Dars jadvali va vaqtlari operator bilan gaplashganda (sotuv vaqtida) aytiladi.
 
 ## Filiallar manzili va mo'ljal
 1. 1-filial "Asosiy bino" — Istirohat bog'i ro'parasida
