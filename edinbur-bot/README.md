@@ -41,10 +41,23 @@ edinbur-bot/
 1. **Bot token.** Telegram'da [@BotFather](https://t.me/BotFather) → `/newbot` → bergan tokenni saqlang.
 2. **Claude API kaliti.** [platform.claude.com](https://platform.claude.com) → API Keys → yangi kalit,
    Billing bo'limida balans to'ldiring.
-3. **Call-center guruhi.** Botni guruhga qo'shing (xabar yoza olishi kerak). Guruhda
-   `/chatid@BotUsername` deb yozing — bot guruh ID sini aytadi (masalan `-1001234567890`).
-4. `.env.example` ni `.env` nomi bilan nusxalang va uchta qiymatni yozing:
-   `TELEGRAM_BOT_TOKEN`, `GROUP_CHAT_ID`, `ANTHROPIC_API_KEY`. `.env` gitga tushmaydi.
+3. **Call-center guruhi.** Telegram'da guruh yarating (yoki borini ishlating) va botni unga qo'shing
+   (xabar yoza olishi kerak).
+4. `.env.example` ni `.env` nomi bilan nusxalang va qiymatlarni yozing: `TELEGRAM_BOT_TOKEN`,
+   `ANTHROPIC_API_KEY` va hozircha `GROUP_CHAT_ID=0`. `.env` gitga tushmaydi.
+
+### Guruh ID sini olish
+
+Guruh ID sini bot o'zi aytadi, lekin buning uchun bot ishlab turgan bo'lishi kerak. Shuning uchun
+avval `GROUP_CHAT_ID=0` bilan ishga tushiring (kompyuterda — 2-bo'lim, Railway'da — 3-bo'lim), keyin:
+
+1. Guruhda `/chatid@BotUsername` deb yozing (`BotUsername` — botingiz nomi, `@` bilan yozish shart).
+2. Bot javob beradi: `Chat ID: -1001234567890`.
+3. Shu raqamni `GROUP_CHAT_ID` ga yozing va botni qayta ishga tushiring.
+4. Logda `Call-center guruhi: <guruh nomi>` chiqsa — ulandi.
+
+`GROUP_CHAT_ID=0` turganda kelgan arizalar yo'qolmaydi: ular saqlanib turadi va haqiqiy ID kiritilib,
+bot qayta ishga tushgach (5 daqiqa ichida) guruhga yuboriladi.
 
 ## 2. Kompyuterda ishga tushirish
 
@@ -62,21 +75,48 @@ Bir token bilan faqat **bitta** bot nusxasi ishlashi mumkin — serverga qo'ygac
 
 ## 3. Railway'ga joylash
 
-1. Kodni GitHub'ga qo'ying (bu repo). [railway.com](https://railway.com) → New Project → Deploy from GitHub
-   repo → shu repo.
-2. Servis **Settings**:
-   - **Root Directory:** `/edinbur-bot`
-   - **Start Command:** `python -m bot`
-3. **Variables** bo'limiga `.env` dagi qiymatlarni qo'shing: `TELEGRAM_BOT_TOKEN`, `GROUP_CHAT_ID`,
-   `ANTHROPIC_API_KEY`, hamda:
-   - `DATABASE_PATH` = `/data/bot.db`
-   - `LOG_FILE` = `/data/bot.log`
-4. **Volume qo'shing** (servis ustida o'ng tugma → Attach Volume), Mount path: `/data`.
-   Bu muhim: volume bo'lmasa, har deploy'da suhbatlar bazasi o'chib ketadi.
-5. Deploy. Loglarda `Bot ishga tushdi: @...` chiqsa — tayyor.
+Bot "long polling" bilan ishlaydi: domen, port yoki webhook kerak emas. Doim ishlab turishi uchun
+Railway'ning **Hobby** tarifi kerak (oyiga taxminan $5) — bu bot uchun yetadi.
 
-Bot "long polling" bilan ishlaydi: domen, port yoki webhook kerak emas. Railway'ning eng arzon (Hobby)
-tarifi yetadi.
+1. **Loyiha.** [railway.com](https://railway.com) → GitHub bilan kiring → **New Project** →
+   **Deploy from GitHub repo** → `tohirbekhaydaraliev/Tohirbek`. Repo ro'yxatda bo'lmasa,
+   **Configure GitHub App** orqali Railway'ga shu repo'ga ruxsat bering. Birinchi build xato berishi
+   normal — hali sozlanmagan.
+2. **Settings** (servisni bosing):
+   - **Root Directory:** `/edinbur-bot`
+   - **Branch:** `main`
+   - **Custom Start Command:** `python -m bot`
+   - Public domain (Networking) kerak emas.
+3. **Variables** → **Raw Editor** → quyidagini qiymatlaringiz bilan qo'ying:
+
+   ```
+   TELEGRAM_BOT_TOKEN=123456:ABC...
+   ANTHROPIC_API_KEY=sk-ant-...
+   GROUP_CHAT_ID=0
+   DATABASE_PATH=/data/bot.db
+   LOG_FILE=/data/bot.log
+   ```
+
+4. **Volume.** Loyiha oynasida servis ustida o'ng tugma → **Attach Volume** (yoki `Ctrl+K` →
+   "Volume") → **Mount path:** `/data`. Bu majburiy: volume bo'lmasa, har deploy'da suhbatlar va
+   arizalar holati o'chib ketadi.
+5. **Deploy** / **Apply changes** → **Deployments** → oxirgi deploy → **View Logs**.
+   `Bot ishga tushdi: @...` chiqsa — bot ishlayapti.
+6. **Guruh ID si.** Guruhda `/chatid@BotUsername` yozing → chiqqan raqamni **Variables** dagi
+   `GROUP_CHAT_ID` ga yozing va yana **Deploy** / **Apply changes** ni bosing. Logda
+   `Call-center guruhi: ...` chiqishi kerak.
+7. **Sinov.** Botga shaxsiy chatda kurs, ism va telefon yozing — guruhga
+   `🆕 Yangi ariza — Telegram bot` kelishi kerak.
+
+### Xato chiqsa
+
+| Logda | Sababi |
+|---|---|
+| `Sozlamalarda xato: .env faylda yo'q: ...` | Variables'da shu o'zgaruvchi yo'q yoki nomi xato |
+| `TelegramConflictError` | Bot boshqa joyda ham ishlayapti (masalan kompyuterda) — o'shani to'xtating |
+| `GROUP_CHAT_ID guruhiga ulanib bo'lmadi` | Bot guruhda emas yoki ID noto'g'ri |
+| `authentication_error` yoki `credit balance` | Anthropic kaliti noto'g'ri yoki balans tugagan |
+| Build'da start command yoki Python topilmadi | Root Directory `/edinbur-bot` emas |
 
 ## 4. Oddiy VPS'ga joylash (Ubuntu)
 
@@ -85,7 +125,7 @@ sudo apt install -y python3 python3-venv git
 git clone https://github.com/tohirbekhaydaraliev/Tohirbek.git
 cd Tohirbek/edinbur-bot
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
-cp .env.example .env && nano .env        # uchta kalitni yozing
+cp .env.example .env && nano .env        # kalitlarni yozing (GROUP_CHAT_ID=0 bilan boshlang)
 
 # doim ishlab tursin (server qayta yonsa ham):
 nano deploy/edinbur-bot.service           # User va yo'llarni moslang

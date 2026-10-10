@@ -98,17 +98,27 @@ async def _retry_loop(agent: Agent) -> None:
 
 async def run(settings: Settings) -> None:
     bot = Bot(settings.telegram_bot_token)
+    me = await bot.get_me()
     notifier: StaffNotifier
     if settings.dry_run:
         log.warning("DRY_RUN yoqilgan: arizalar guruhga emas, faqat logga yoziladi")
         notifier = LogNotifier()
     else:
+        # GROUP_CHAT_ID=0 bo'lsa ham shu notifier: arizalar yuborilmay turadi va
+        # haqiqiy ID kiritilib bot qayta ishga tushgach guruhga qayta yuboriladi
         notifier = TelegramGroupNotifier(bot, settings.group_chat_id)
-        try:
-            chat = await bot.get_chat(settings.group_chat_id)
-            log.info("Call-center guruhi: %s", chat.title)
-        except Exception:
-            log.exception("GROUP_CHAT_ID guruhiga ulanib bo'lmadi - bot guruhga qo'shilganini tekshiring")
+        if settings.group_chat_id == 0:
+            log.warning(
+                "GROUP_CHAT_ID hali kiritilmagan (0). Botni call-center guruhiga qo'shing va guruhda "
+                "/chatid@%s deb yozing, keyin chiqqan raqamni GROUP_CHAT_ID ga yozib botni qayta ishga tushiring",
+                me.username,
+            )
+        else:
+            try:
+                chat = await bot.get_chat(settings.group_chat_id)
+                log.info("Call-center guruhi: %s", chat.title)
+            except Exception:
+                log.exception("GROUP_CHAT_ID guruhiga ulanib bo'lmadi - bot guruhga qo'shilganini tekshiring")
 
     agent = Agent(
         storage=Storage(settings.database_path),
@@ -124,7 +134,6 @@ async def run(settings: Settings) -> None:
     dp = Dispatcher()
     dp.include_router(build_router(agent))
     retry_task = asyncio.create_task(_retry_loop(agent))
-    me = await bot.get_me()
     log.info("Bot ishga tushdi: @%s (model %s, effort %s)", me.username, settings.anthropic_model, settings.anthropic_effort)
     try:
         await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
