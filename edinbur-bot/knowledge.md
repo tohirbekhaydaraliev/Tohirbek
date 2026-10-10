@@ -41,7 +41,7 @@
 ## Filiallar manzili va mo'ljal
 1. 1-filial "Asosiy bino" — Istirohat bog'i ro'parasida
 2. 2-filial "Holis makon" — Dehqon bozori yonida
-3. 3-filial — Soliq binosi ro'parasida, Terassa cafe yonida
+3. 3-filial "Edinbur Terassa" — Soliq binosi ro'parasida, Terassa cafe yonida
 
 ## Ish vaqti va aloqa
 - Ish vaqti: 8:00 dan 17:00 gacha
