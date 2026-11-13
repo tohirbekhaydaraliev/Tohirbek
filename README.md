@@ -12,3 +12,7 @@ Business Data → Context → AI Reasoning → Decision → Action → Result �
 ```
 
 Batafsil: [yoldosh-ai/README.md](yoldosh-ai/README.md) · Arxitektura: [yoldosh-ai/docs/ARCHITECTURE.md](yoldosh-ai/docs/ARCHITECTURE.md)
+
+### [Edinbur School bot](edinbur-bot/) — Telegram AI yordamchi
+
+Mijoz bilan suhbatlashib, qiziqqan kursi, ismi va telefonini aniqlaydi va tayyor arizani call-center guruhiga yuboradi. Batafsil: [edinbur-bot/README.md](edinbur-bot/README.md)
