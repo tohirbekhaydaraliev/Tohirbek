@@ -1,4 +1,5 @@
 import type { Db } from '../db';
+import { UserError } from '../lib/errors';
 import { newId } from '../lib/util';
 
 /**
@@ -58,7 +59,8 @@ export async function upsertTarget(
     `INSERT INTO targets (id, business_id, kind, metric, label, target, comparator, segment, priority)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
      ON CONFLICT (id) DO UPDATE SET kind = EXCLUDED.kind, metric = EXCLUDED.metric, label = EXCLUDED.label,
-       target = EXCLUDED.target, comparator = EXCLUDED.comparator, segment = EXCLUDED.segment, priority = EXCLUDED.priority`,
+       target = EXCLUDED.target, comparator = EXCLUDED.comparator, segment = EXCLUDED.segment, priority = EXCLUDED.priority
+     WHERE targets.business_id = EXCLUDED.business_id`,
     [
       id,
       businessId,
@@ -71,8 +73,12 @@ export async function upsertTarget(
       input.priority ?? 2,
     ],
   );
-  const row = await db.one<Target>('SELECT id, kind, metric, label, target, comparator, segment, priority FROM targets WHERE id = $1', [id]);
-  return row!;
+  const row = await db.one<Target>(
+    'SELECT id, kind, metric, label, target, comparator, segment, priority FROM targets WHERE id = $1 AND business_id = $2',
+    [id, businessId],
+  );
+  if (!row) throw new UserError('Maqsad topilmadi', 404);
+  return row;
 }
 
 export async function deleteTarget(db: Db, businessId: string, id: string): Promise<void> {

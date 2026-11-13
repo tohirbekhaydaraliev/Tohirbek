@@ -27,6 +27,8 @@ import { getDiagnosis, latestDiagnosis, listDiagnoses, runDiagnosis } from '../b
 import { getBusiness, listBusinesses, updateBusiness } from '../context/business';
 import { deleteRule, listRules, runRules, upsertRule } from '../context/rules';
 import { deleteTarget, listTargets, METRIC_CATALOG, upsertTarget } from '../context/targets';
+import { isValidTimezone, setupBusiness, VERTICALS } from '../context/onboarding';
+import { deactivateProduct, listProducts, upsertProduct } from '../context/products';
 import { CSV_TEMPLATES, csvToRecords, type CsvKind } from '../connectors/csv';
 import {
   connectorCatalog,
@@ -45,6 +47,7 @@ import { DEMO_BUSINESS_ID, resetDemo, seedDemo } from '../demo/seed';
 import { decisionHistory, evaluateDueOutcomes, learningStats } from '../feedback/outcomes';
 import { ingestRecords } from '../ingest';
 import * as q from '../metrics/queries';
+import { UserError } from '../lib/errors';
 import { comparisonRanges, errorMessage } from '../lib/util';
 
 type Env = { Variables: { businessId: string } };
@@ -77,9 +80,9 @@ export function createApp(db: Db) {
   const app = new Hono<Env>();
 
   app.onError((err, c) => {
-    const status = err instanceof HttpError ? err.status : err instanceof ActionValidationError ? 400 : 500;
+    const status = err instanceof HttpError || err instanceof UserError ? err.status : 500;
     if (status === 500) console.error('[api]', err);
-    return c.json({ error: errorMessage(err) }, status as 400 | 401 | 404 | 500);
+    return c.json({ error: errorMessage(err) }, status as 400 | 401 | 404 | 409 | 500);
   });
 
   // ---------- Ochiq endpointlar ----------
@@ -108,8 +111,9 @@ export function createApp(db: Db) {
     const requested = c.req.header('x-business-id') ?? c.req.query('businessId');
     const businesses = await listBusinesses(db);
     const b = businesses.find((x) => x.id === requested) ?? businesses[0];
-    if (!b && !c.req.path.startsWith('/api/meta') && !c.req.path.startsWith('/api/demo')) {
-      return c.json({ error: "Biznes yo'q. Demo ma'lumotlarni yuklang: POST /api/demo/reset" }, 404);
+    const noBusinessOk = ['/api/meta', '/api/demo', '/api/businesses'].some((p) => c.req.path.startsWith(p));
+    if (!b && !noBusinessOk) {
+      return c.json({ error: "Biznes yo'q. Yangi biznes yarating (POST /api/businesses) yoki demo'ni yuklang (POST /api/demo/reset)" }, 404);
     }
     c.set('businessId', b?.id ?? '');
     await next();
@@ -124,6 +128,27 @@ export function createApp(db: Db) {
       businesses: (await listBusinesses(db)).map((b) => ({ id: b.id, name: b.name })),
     }),
   );
+
+  // ---------- Bizneslar ----------
+  app.get('/api/businesses', async (c) => c.json((await listBusinesses(db)).map((b) => ({ id: b.id, name: b.name, vertical: b.vertical }))));
+  app.post('/api/businesses', async (c) => {
+    const input = await body(
+      c,
+      z.object({
+        name: z.string().trim().min(2).max(120),
+        vertical: z.enum(VERTICALS).default('education'),
+        currency: z.string().trim().min(3).max(3).default('UZS'),
+        timezone: z.string().trim().default('Asia/Tashkent'),
+        strategy: z.string().max(4000).optional(),
+        products: z
+          .array(z.object({ name: z.string().trim().min(1).max(120), price: z.number().min(0), keywords: z.array(z.string()).max(20).optional() }))
+          .max(50)
+          .default([]),
+      }),
+    );
+    if (!isValidTimezone(input.timezone)) throw new HttpError(400, `Noto'g'ri vaqt mintaqasi: ${input.timezone}`);
+    return c.json(await setupBusiness(db, input), 201);
+  });
 
   // ---------- Biznes konteksti ----------
   app.get('/api/business', async (c) => c.json(await getBusiness(db, c.get('businessId'))));
@@ -145,6 +170,7 @@ export function createApp(db: Db) {
     return c.json({
       business: await getBusiness(db, bid),
       targets: await listTargets(db, bid),
+      products: await listProducts(db, bid),
       rules: await listRules(db, bid),
       detectors: detectorCatalog(),
       metrics: METRIC_CATALOG,
@@ -166,6 +192,20 @@ export function createApp(db: Db) {
   );
   app.delete('/api/context/targets/:id', async (c) => {
     await deleteTarget(db, c.get('businessId'), c.req.param('id'));
+    return c.json({ ok: true });
+  });
+  const productSchema = z.object({
+    name: z.string().trim().min(1).max(120),
+    segment: z.string().trim().max(120).optional(),
+    price: z.number().min(0),
+    keywords: z.array(z.string()).max(20).optional(),
+  });
+  app.post('/api/context/products', async (c) => c.json(await upsertProduct(db, c.get('businessId'), await body(c, productSchema))));
+  app.patch('/api/context/products/:id', async (c) =>
+    c.json(await upsertProduct(db, c.get('businessId'), { ...(await body(c, productSchema)), id: c.req.param('id') })),
+  );
+  app.delete('/api/context/products/:id', async (c) => {
+    await deactivateProduct(db, c.get('businessId'), c.req.param('id'));
     return c.json({ ok: true });
   });
   const ruleSchema = z.object({

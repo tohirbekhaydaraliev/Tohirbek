@@ -2,6 +2,7 @@ import type { Db } from '../db';
 import type { ConnectorTypeInfo, ConnectorView } from '../../shared/types';
 import { config } from '../config';
 import { ingestRecords } from '../ingest';
+import { UserError } from '../lib/errors';
 import { errorMessage, newId, now } from '../lib/util';
 import { amoCrmConnector } from './amocrm';
 import { metaAdsConnector } from './meta';
@@ -93,7 +94,7 @@ export async function getActiveConnector(db: Db, businessId: string, type: strin
 function validateConfig(def: ConnectorDefinition, cfg: Record<string, unknown>) {
   for (const f of def.configFields) {
     if (f.required && (cfg[f.key] === undefined || cfg[f.key] === null || cfg[f.key] === '')) {
-      throw new Error(`"${f.label}" majburiy`);
+      throw new UserError(`"${f.label}" majburiy`);
     }
   }
 }
@@ -104,7 +105,7 @@ export async function createConnector(
   input: { type: string; name?: string; config: Record<string, unknown> },
 ): Promise<ConnectorView> {
   const def = CONNECTORS[input.type];
-  if (!def || def.type === 'demo') throw new Error(`Noma'lum connector turi: ${input.type}`);
+  if (!def || def.type === 'demo') throw new UserError(`Noma'lum connector turi: ${input.type}`);
   const cfg: Record<string, unknown> = {};
   for (const f of def.configFields) {
     const v = input.config[f.key] ?? f.default;
@@ -129,7 +130,7 @@ export async function updateConnector(
   patch: { name?: string; status?: string; config?: Record<string, unknown> },
 ): Promise<ConnectorView> {
   const row = await getConnectorRow(db, id);
-  if (!row || row.business_id !== businessId) throw new Error('Connector topilmadi');
+  if (!row || row.business_id !== businessId) throw new UserError('Connector topilmadi', 404);
   const def = CONNECTORS[row.type];
   let cfg = row.config;
   if (patch.config && def) {

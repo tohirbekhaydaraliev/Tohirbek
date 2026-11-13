@@ -4,6 +4,7 @@ import { proposeAction, type ProposeInput } from '../actions/service';
 import { ACTIONS } from '../actions/registry';
 import { loadBrainContext, type BrainContext } from '../brain/context';
 import { DETECTORS, type DetectedFinding } from '../brain/detectors';
+import { UserError } from '../lib/errors';
 import { addDays, errorMessage, isoDate, newId } from '../lib/util';
 
 /**
@@ -36,18 +37,21 @@ export async function upsertRule(
   input: Partial<BusinessRule> & { name: string; detector: string; action_type: string },
 ): Promise<BusinessRule> {
   const det = DETECTORS[input.detector];
-  if (!det) throw new Error(`Noma'lum detektor: ${input.detector}`);
-  if (!ACTIONS[input.action_type]) throw new Error(`Noma'lum harakat: ${input.action_type}`);
-  if (!det.actions.includes(input.action_type)) throw new Error(`"${det.label}" detektori uchun "${input.action_type}" harakati mos emas`);
+  if (!det) throw new UserError(`Noma'lum detektor: ${input.detector}`);
+  if (!ACTIONS[input.action_type]) throw new UserError(`Noma'lum harakat: ${input.action_type}`);
+  if (!det.actions.includes(input.action_type)) throw new UserError(`"${det.label}" detektori uchun "${input.action_type}" harakati mos emas`);
   const id = input.id ?? newId('rul');
   await db.query(
     `INSERT INTO business_rules (id, business_id, name, description, detector, params, action_type, action_params, enabled)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
      ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.description, detector = EXCLUDED.detector,
-       params = EXCLUDED.params, action_type = EXCLUDED.action_type, action_params = EXCLUDED.action_params, enabled = EXCLUDED.enabled`,
+       params = EXCLUDED.params, action_type = EXCLUDED.action_type, action_params = EXCLUDED.action_params, enabled = EXCLUDED.enabled
+     WHERE business_rules.business_id = EXCLUDED.business_id`,
     [id, businessId, input.name, input.description ?? null, input.detector, input.params ?? {}, input.action_type, input.action_params ?? {}, input.enabled ?? true],
   );
-  return (await db.one<BusinessRule>('SELECT * FROM business_rules WHERE id = $1', [id]))!;
+  const row = await db.one<BusinessRule>('SELECT * FROM business_rules WHERE id = $1 AND business_id = $2', [id, businessId]);
+  if (!row) throw new UserError('Qoida topilmadi', 404);
+  return row;
 }
 
 export async function deleteRule(db: Db, businessId: string, id: string) {

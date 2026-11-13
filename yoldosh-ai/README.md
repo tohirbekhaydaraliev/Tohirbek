@@ -48,12 +48,7 @@ npm run build
 npm start                     # http://localhost:8787 (UI va API bitta serverda)
 ```
 
-Docker + PostgreSQL:
-
-```bash
-cp .env.example .env
-docker compose up -d --build
-```
+Server (production) uchun — pastdagi [Deploy](#deploy) bo'limiga qarang.
 
 ### Buyruqlar
 
@@ -61,10 +56,49 @@ docker compose up -d --build
 |---|---|
 | `npm run dev` | Server (hot reload) + Vite UI |
 | `npm run build` / `npm start` | Production build va ishga tushirish |
-| `npm test` | Vitest: 41 ta test (engine, connectorlar, action layer, API, agent sikli) |
+| `npm test` | Vitest: 46 ta test (engine, connectorlar, action layer, API, onboarding, agent sikli) |
 | `npm run typecheck` | TypeScript tekshiruvi |
 | `npm run seed` | Demo biznesni qaytadan yaratish |
 | `npm run diagnose` | Diagnostikani hozir ishga tushirib, natijani konsolga chiqarish |
+
+---
+
+## Deploy
+
+Tavsiya: **VPS (Ubuntu 22.04/24.04, 2 vCPU / 4 GB RAM) + Docker Compose**. Tarkibi: ilova, PostgreSQL 16 va avtomatik HTTPS (Let's Encrypt) uchun Caddy.
+
+1. Domenning A yozuvini server IP'siga yo'naltiring, 80 va 443 portlarini oching.
+2. Docker o'rnating va kodni oling:
+   ```bash
+   curl -fsSL https://get.docker.com | sh
+   git clone https://github.com/tohirbekhaydaraliev/tohirbek.git && cd tohirbek/yoldosh-ai
+   cp .env.example .env
+   ```
+3. `.env` ni to'ldiring:
+
+   | O'zgaruvchi | Qiymat |
+   |---|---|
+   | `DOMAIN` | `yoldosh.example.uz` — Caddy shu domen uchun sertifikat oladi; `PUBLIC_URL` avtomatik `https://DOMAIN` bo'ladi |
+   | `YOLDOSH_API_TOKEN` | **Majburiy.** Busiz URL'ni bilgan har kim ma'lumotni ko'radi va harakatlarni tasdiqlaydi: `openssl rand -hex 32` |
+   | `YOLDOSH_SECRET_KEY` | Integratsiya tokenlarini shifrlash kaliti: `openssl rand -hex 32` (keyin o'zgartirmang) |
+   | `POSTGRES_PASSWORD` | Ma'lumotlar bazasi paroli |
+   | `ANTHROPIC_API_KEY` | Claude AI (ixtiyoriy) |
+   | `YOLDOSH_SEED_DEMO` | Haqiqiy biznes uchun `false` — birinchi ochilganda biznes yaratish formasi chiqadi |
+
+4. Ishga tushiring va tekshiring:
+   ```bash
+   docker compose --profile https up -d --build
+   docker compose logs -f app        # "Yo'ldosh AI ishga tushdi"
+   ```
+   `https://DOMAIN` ni oching → `YOLDOSH_API_TOKEN` bilan kiring → biznesingizni yarating (nom, soha, mahsulotlar/kurslar) → **Integratsiyalar**dan amoCRM, Meta Ads, to'lovlar webhook'ini ulang → Telegram kartasida **"Webhookni o'rnatish"**.
+
+Yangilash: `git pull && docker compose --profile https up -d --build`. Zaxira nusxa (har kuni cron bilan): `docker compose exec -T db pg_dump -U yoldosh yoldosh | gzip > backup-$(date +%F).sql.gz`.
+
+Muhim:
+- Faqat **bitta** ilova nusxasini ishlating — rejalashtiruvchi (sync, qoidalar, kunlik diagnostika) jarayon ichida ishlaydi.
+- `https` profilisiz (`docker compose up -d`) ilova faqat serverning o'zida `127.0.0.1:8787` da ochiladi; o'zingizning nginx'ingiz bo'lsa — `APP_BIND` ni sozlang.
+- Boshqa platformalar (Railway, Render, Fly.io): `Dockerfile` + boshqariladigan PostgreSQL (`DATABASE_URL`), health check `/api/health`, bitta instance.
+- O'zbekistonda fuqarolarning shaxsiy ma'lumotlarini mahalliy serverlarda saqlash talabi bor; AI yoqilganda ma'lumotlarning bir qismi Anthropic API'ga yuboriladi — joylashuvni yurist bilan tekshiring.
 
 ---
 
@@ -188,6 +222,7 @@ Avtonomiya **Biznes konteksti** sahifasida bosqichma-bosqich oshiriladi. Integra
 
 | Endpoint | Tavsif |
 |---|---|
+| `GET/POST /api/businesses` | Bizneslar ro'yxati / yangi biznes (profil, mahsulotlar, standart qoidalar). Tanlash: `x-business-id` sarlavhasi |
 | `GET /api/overview` | Bosh sahifa: diagnostika, ustuvorliklar, tasdiq kutayotgan harakatlar |
 | `POST /api/diagnoses` · `GET /api/diagnoses/latest` | Diagnostikani ishga tushirish / oxirgisi (KPI daraxti, root cause) |
 | `GET /api/actions?status=pending` · `POST /api/actions/:id/approve\|reject\|ignore` | Action Layer |

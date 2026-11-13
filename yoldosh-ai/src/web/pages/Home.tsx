@@ -73,6 +73,34 @@ export function HomePage() {
         </button>
       </div>
 
+      {data.connectors.length === 0 && (
+        <div className="card">
+          <div className="card-head">
+            <h2>Boshlash uchun qadamlar</h2>
+          </div>
+          <ol className="priorities">
+            {[
+              ['Ma’lumot manbalarini ulang', 'amoCRM, Meta Ads, to‘lovlar webhook’i yoki Excel/CSV import — ma’lumot avtomatik yig‘iladi.', 'integratsiyalar'],
+              ['Telegram botni ulang', 'Kunlik diagnostika va harakatlarni Telegram’da tasdiqlash uchun.', 'integratsiyalar'],
+              ['Maqsad va KPI’larni kiriting', 'CAC, konversiya, faol mijozlar maqsadi — AI shular bo‘yicha baholaydi.', 'kontekst'],
+            ].map(([title, detail, to], i) => (
+              <li key={title}>
+                <span className="prio-rank">{i + 1}</span>
+                <div className="row" style={{ justifyContent: 'space-between', flexWrap: 'nowrap' }}>
+                  <div>
+                    <div className="prio-title">{title}</div>
+                    <div className="prio-detail">{detail}</div>
+                  </div>
+                  <button className="btn sm" onClick={() => navigate(to)}>
+                    Ochish <Icon name="chevronRight" size={14} />
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+
       <div className="grid grid-main">
         <div className="stack" style={{ gap: 16 }}>
         <div className="card agent-card">
@@ -80,7 +108,7 @@ export function HomePage() {
             <div className="agent-label">
               <span className="pulse" /> Yo'ldosh AI · biznes agenti
             </div>
-            {d && revenue ? (
+            {d && revenue && (revenue.current || revenue.previous) ? (
               <>
                 <div className="hero-figure">
                   <span className="value">
@@ -108,7 +136,11 @@ export function HomePage() {
                 )}
               </>
             ) : (
-              <Empty>Diagnostika natijasi yo'q — "Hozir tekshirish" tugmasini bosing.</Empty>
+              <Empty>
+                {data.connectors.length === 0
+                  ? "Hali ma'lumot yo'q — integratsiyalarni ulang yoki Excel/CSV import qiling, so'ng diagnostika avtomatik ishlaydi."
+                  : 'Diagnostika natijasi yo‘q — "Hozir tekshirish" tugmasini bosing.'}
+              </Empty>
             )}
           </div>
           {d && (

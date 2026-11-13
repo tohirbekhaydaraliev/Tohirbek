@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Icon } from './components/Icon';
-import { LoadingPage } from './components/ui';
-import { api, ApiError, post, setToken } from './lib/api';
+import { CreateBusinessForm } from './components/CreateBusiness';
+import { LoadingPage, Modal } from './components/ui';
+import { api, ApiError, getBusinessId, post, setBusinessId, setToken } from './lib/api';
 import { AppContext, useHashRoute } from './lib/hooks';
 import { ActionsPage } from './pages/Actions';
 import { ChatPage } from './pages/Chat';
@@ -107,6 +108,8 @@ export function App() {
   const [meta, setMeta] = useState<Meta | null>(null);
   const [needLogin, setNeedLogin] = useState(false);
   const [noBusiness, setNoBusiness] = useState(false);
+  const [businessId, setBusinessIdState] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [, toggleTheme] = useTheme();
@@ -114,6 +117,11 @@ export function App() {
   const loadMeta = useCallback(async () => {
     try {
       const m = await api<Meta>('/api/meta');
+      // Saqlangan biznes ro'yxatda bo'lmasa — birinchisi tanlanadi
+      const stored = getBusinessId();
+      const current = m.businesses.find((b) => b.id === stored)?.id ?? m.businesses[0]?.id ?? null;
+      setBusinessId(current);
+      setBusinessIdState(current);
       setMeta(m);
       setNoBusiness(m.businesses.length === 0);
       setNeedLogin(false);
@@ -136,7 +144,7 @@ export function App() {
   }, [loadMeta]);
   useEffect(() => {
     if (meta && !noBusiness) void refreshCounts();
-  }, [meta, noBusiness, path, refreshCounts]);
+  }, [meta, noBusiness, path, businessId, refreshCounts]);
 
   const toast = useCallback((msg: string) => {
     setToastMsg(msg);
@@ -147,21 +155,46 @@ export function App() {
 
   if (needLogin) return <Login onDone={loadMeta} />;
   if (!meta) return <LoadingPage text="Yo'ldosh AI yuklanmoqda..." />;
+  const onCreated = async (b: { id: string; name: string }) => {
+    setBusinessId(b.id);
+    setCreating(false);
+    await loadMeta();
+    navigate('');
+    toast(`"${b.name}" yaratildi. Endi integratsiyalarni ulang.`);
+  };
+
+  const switchBusiness = (id: string) => {
+    setBusinessId(id);
+    setBusinessIdState(id);
+    navigate('');
+  };
+
   if (noBusiness) {
     return (
       <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 16 }}>
-        <div className="card stack" style={{ width: 'min(460px, 100%)', textAlign: 'center' }}>
-          <h2>Biznes hali yo'q</h2>
-          <p className="small muted">Demo biznes ("Edinburg" o'quv markazi) ma'lumotlari bilan boshlang yoki integratsiyalarni ulang.</p>
-          <button
-            className="btn primary"
-            onClick={async () => {
-              await post('/api/demo/reset');
-              await loadMeta();
-            }}
-          >
-            Demo ma'lumotlarni yuklash
-          </button>
+        <div className="card stack" style={{ width: 'min(560px, 100%)' }}>
+          <div className="brand" style={{ padding: 0 }}>
+            <div className="brand-mark">
+              <Icon name="sparkles" size={18} />
+            </div>
+            <div>
+              <div className="brand-name">Yo'ldosh AI</div>
+              <div className="brand-sub">Biznesingizni qo'shing</div>
+            </div>
+          </div>
+          <CreateBusinessForm onCreated={onCreated} />
+          <div className="row small muted" style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+            <span className="spacer">Avval ko'rib chiqmoqchimisiz?</span>
+            <button
+              className="btn sm"
+              onClick={async () => {
+                await post('/api/demo/reset');
+                await loadMeta();
+              }}
+            >
+              Demo biznesni yuklash
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -219,7 +252,20 @@ export function App() {
             <span className={`badge ${meta.aiEnabled ? 'good' : 'warning'}`} title={meta.model ?? undefined}>
               <span className="dot" /> {meta.aiEnabled ? `AI: ${meta.model}` : 'AI: engine rejimi'}
             </span>
-            <span>{meta.businesses[0]?.name}</span>
+            {meta.businesses.length > 1 ? (
+              <select className="select" style={{ padding: '4px 8px', fontSize: 13 }} value={businessId ?? ''} onChange={(e) => switchBusiness(e.target.value)} aria-label="Biznesni tanlash">
+                {meta.businesses.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <span>{meta.businesses[0]?.name}</span>
+            )}
+            <button className="btn ghost sm" style={{ justifyContent: 'flex-start' }} onClick={() => setCreating(true)}>
+              <Icon name="plus" size={15} /> Yangi biznes
+            </button>
             <div className="row" style={{ gap: 4 }}>
               <button className="btn ghost sm" onClick={toggleTheme} aria-label="Mavzuni almashtirish">
                 <Icon name="moon" size={15} /> Mavzu
@@ -240,9 +286,16 @@ export function App() {
         </aside>
         <div style={{ minWidth: 0 }}>
           <nav className="mobile-nav">{navItems}</nav>
-          <main className="main">{page}</main>
+          <main className="main" key={businessId ?? 'none'}>
+            {page}
+          </main>
         </div>
       </div>
+      {creating && (
+        <Modal title="Yangi biznes" onClose={() => setCreating(false)}>
+          <CreateBusinessForm onCreated={onCreated} onCancel={() => setCreating(false)} />
+        </Modal>
+      )}
       {toastMsg && (
         <div className="toast" role="status">
           {toastMsg}

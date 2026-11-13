@@ -23,16 +23,34 @@ export function setToken(token: string | null) {
   }
 }
 
+const BUSINESS_KEY = 'yoldosh.business';
+
+/** Tanlangan biznes (bir nechta biznes bo'lsa) — har so'rovda x-business-id sarlavhasi bilan yuboriladi. */
+export function getBusinessId(): string | null {
+  return safeGet(BUSINESS_KEY);
+}
+
+export function setBusinessId(id: string | null) {
+  try {
+    if (id) localStorage.setItem(BUSINESS_KEY, id);
+    else localStorage.removeItem(BUSINESS_KEY);
+  } catch {
+    /* brauzer xotirasi yopiq bo'lishi mumkin */
+  }
+}
+
 export class ApiError extends Error {
   constructor(readonly status: number, message: string) {
     super(message);
   }
 }
 
-function headers(extra?: HeadersInit): Headers {
+export function headers(extra?: HeadersInit): Headers {
   const h = new Headers(extra);
   const token = getToken();
   if (token) h.set('Authorization', `Bearer ${token}`);
+  const business = getBusinessId();
+  if (business) h.set('x-business-id', business);
   return h;
 }
 

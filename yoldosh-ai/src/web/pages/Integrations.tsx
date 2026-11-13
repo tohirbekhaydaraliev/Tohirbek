@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import type { ConnectorTypeInfo, ConnectorView } from '../../shared/types';
 import { Icon } from '../components/Icon';
 import { Empty, ErrorNotice, LoadingPage, Modal } from '../components/ui';
-import { api, del, getToken, patch, post } from '../lib/api';
+import { api, del, headers, patch, post } from '../lib/api';
 import { ago } from '../lib/format';
 import { useApi, useApp } from '../lib/hooks';
 
@@ -243,7 +243,7 @@ function CsvImport() {
     }
   };
   const template = async () => {
-    const res = await fetch(`/api/import/templates/${kind}`, { headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : {} });
+    const res = await fetch(`/api/import/templates/${kind}`, { headers: headers() });
     const blob = await res.blob();
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);

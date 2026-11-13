@@ -2,6 +2,7 @@ import type { Db } from '../db';
 import type { ActionStatus, ActionView, OutcomeView, RiskLevel } from '../../shared/types';
 import { getBusiness } from '../context/business';
 import { scheduleOutcome } from '../feedback/outcomes';
+import { UserError } from '../lib/errors';
 import { errorMessage, newId, now } from '../lib/util';
 import { decidePolicy } from './policy';
 import { ACTIONS, actionLabel, assessRisk } from './registry';
@@ -11,7 +12,7 @@ import { ACTIONS, actionLabel, assessRisk } from './registry';
  * propose → (siyosat: auto | approval) → approve/reject/ignore → execute → outcome
  */
 
-export class ActionValidationError extends Error {}
+export class ActionValidationError extends UserError {}
 
 export type ActionSource = 'rule' | 'diagnosis' | 'agent' | 'user';
 

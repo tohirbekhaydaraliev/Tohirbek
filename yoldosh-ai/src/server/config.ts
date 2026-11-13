@@ -14,7 +14,7 @@ const port = Number(process.env.PORT ?? 8787);
 
 export const config = {
   port,
-  publicUrl: (process.env.PUBLIC_URL ?? `http://localhost:${port}`).replace(/\/$/, ''),
+  publicUrl: (process.env.PUBLIC_URL || `http://localhost:${port}`).replace(/\/$/, ''),
   apiToken: process.env.YOLDOSH_API_TOKEN || undefined,
   secretKey: process.env.YOLDOSH_SECRET_KEY || undefined,
 

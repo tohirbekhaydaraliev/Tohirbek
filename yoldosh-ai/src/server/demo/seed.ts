@@ -2,6 +2,7 @@ import type { Db } from '../db';
 import { insertMany, json } from '../db';
 import { DEFAULT_SETTINGS } from '../../shared/types';
 import { addDays, addMinutes, DAY, HOUR, isoDate, newId, now as clockNow } from '../lib/util';
+import { insertDefaultRules } from '../context/onboarding';
 import { Rng } from './random';
 
 /**
@@ -697,19 +698,7 @@ export async function seedDemo(db: Db, opts: SeedOptions = {}): Promise<string> 
   await insertMany(db, 'ad_metrics_daily', ['campaign_id', 'business_id', 'date', 'spend', 'impressions', 'clicks', 'leads'], adRows);
 
   // ---------- Kontekst: biznes qoidalari ----------
-  await insertMany(
-    db,
-    'business_rules',
-    ['id', 'business_id', 'name', 'description', 'detector', 'params', 'action_type', 'action_params', 'enabled'],
-    [
-      [newId('rul'), businessId, 'Javobsiz lead → menejerga vazifa', '2 soatdan ortiq javobsiz qolgan leadlar uchun mas’ul menejerga vazifa yaratiladi.', 'lead_unanswered', { hours: 2 }, 'create_task', {}, true],
-      [newId('rul'), businessId, "Guruh to'lishi > 90% → leadlarni boshqa guruhga", "Guruh sig'imi 90% dan oshsa, yangi leadlar shu segmentdagi bo'sh guruhga yo'naltiriladi.", 'group_capacity', { threshold: 0.9 }, 'route_leads', {}, true],
-      [newId('rul'), businessId, 'Talaba 7 kun faol emas → retention alert', "7 kundan ortiq darsga kelmagan faol talabalar bo'yicha retention menejerga vazifa.", 'customer_inactive', { days: 7 }, 'retention_outreach', {}, true],
-      [newId('rul'), businessId, 'CAC > maqsad → kampaniyani tahlil qilish', 'Kampaniya CAC maqsaddan oshsa yoki keskin o‘ssa, avtomatik tahlil tayyorlanadi.', 'cac_above_target', { growthPct: 20 }, 'analyze_campaign', {}, true],
-      [newId('rul'), businessId, 'Churn xavfi → retention menejerni ogohlantirish', 'Churn ehtimoli chegaradan yuqori talabalar ro‘yxati retention menejerga yuboriladi.', 'churn_risk', { threshold: 0.6 }, 'notify_employee', { role: 'retention_manager' }, true],
-      [newId('rul'), businessId, "To'lov 3 kundan ortiq kechiksa → eslatma", "Muddati o'tgan to'lovlar bo'yicha mijozga eslatma (tasdiq bilan).", 'payment_overdue', { days: 3 }, 'send_payment_reminder', {}, true],
-    ],
-  );
+  await insertDefaultRules(db, businessId, 'education');
 
   // ---------- Connectorlar (demo manbalar) ----------
   await insertMany(

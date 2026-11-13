@@ -34,9 +34,17 @@ interface Detector {
   params: Array<{ key: string; label: string; default: number; unit?: string }>;
   actions: string[];
 }
+interface Product {
+  id: string;
+  name: string;
+  segment: string;
+  price: number;
+  keywords: string[];
+}
 interface ContextData {
   business: Business;
   targets: Target[];
+  products: Product[];
   rules: Rule[];
   detectors: Detector[];
   metrics: Record<string, { label: string; unit: string; defaultComparator: 'gte' | 'lte' }>;
@@ -61,6 +69,7 @@ export function ContextPage() {
         <Profile business={data.business} onSaved={(b) => setData({ ...data, business: b })} />
         <Autonomy business={data.business} onSaved={(b) => setData({ ...data, business: b })} />
       </div>
+      <Products products={data.products} reload={reload} />
       <Targets data={data} reload={reload} />
       <Rules data={data} reload={reload} />
     </div>
@@ -172,6 +181,106 @@ function NumField({ label, value: v, onChange, step = 1 }: { label: string; valu
     <div className="field">
       <label>{label}</label>
       <input className="input tnum" type="number" step={step} value={v} onChange={(e) => onChange(Number(e.target.value))} />
+    </div>
+  );
+}
+
+function Products({ products, reload }: { products: Product[]; reload: () => void }) {
+  const { toast } = useApp();
+  const [name, setName] = useState('');
+  const [price, setPrice] = useState('');
+  const [keywords, setKeywords] = useState('');
+  const add = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    try {
+      await post('/api/context/products', {
+        name: name.trim(),
+        price: Number(price.replace(/\s/g, '')) || 0,
+        keywords: keywords.split(',').map((k) => k.trim()).filter(Boolean),
+      });
+      setName('');
+      setPrice('');
+      setKeywords('');
+      reload();
+    } catch (err) {
+      toast((err as Error).message);
+    }
+  };
+  const update = async (p: Product, patchBody: Partial<{ price: number; keywords: string[] }>) => {
+    try {
+      await patch(`/api/context/products/${p.id}`, { name: p.name, segment: p.segment, price: p.price, keywords: p.keywords, ...patchBody });
+      reload();
+    } catch (err) {
+      toast((err as Error).message);
+    }
+  };
+  const remove = async (p: Product) => {
+    await del(`/api/context/products/${p.id}`);
+    reload();
+  };
+  return (
+    <div className="card">
+      <div className="card-head">
+        <div>
+          <h2>Mahsulotlar / kurslar</h2>
+          <div className="hint">Kampaniya, lead va to'lov nomlaridagi kalit so'zlar orqali segment aniqlanadi ("IELTS September" → IELTS)</div>
+        </div>
+      </div>
+      <div className="table-wrap">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Nomi (segment)</th>
+              <th>Kalit so'zlar</th>
+              <th className="num">Oylik narx</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {products.map((p) => (
+              <tr key={p.id}>
+                <td className="small strong">{p.name}</td>
+                <td>
+                  <input
+                    className="input"
+                    style={{ padding: '4px 8px' }}
+                    defaultValue={p.keywords.join(', ')}
+                    placeholder="masalan: ielts, band"
+                    onBlur={(e) => {
+                      const kw = e.target.value.split(',').map((k) => k.trim().toLowerCase()).filter(Boolean);
+                      if (kw.join(',') !== p.keywords.join(',')) void update(p, { keywords: kw });
+                    }}
+                  />
+                </td>
+                <td className="num" style={{ width: 170 }}>
+                  <input
+                    className="input tnum"
+                    type="number"
+                    style={{ padding: '4px 8px', textAlign: 'right' }}
+                    defaultValue={p.price}
+                    onBlur={(e) => Number(e.target.value) !== p.price && update(p, { price: Number(e.target.value) })}
+                  />
+                </td>
+                <td className="num">
+                  <button className="btn ghost sm danger" onClick={() => remove(p)} aria-label="O'chirish">
+                    <Icon name="trash" size={14} />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {products.length === 0 && <Empty>Mahsulot yo'q — qo'shing, aks holda leadlar segmentlarga ajratilmaydi.</Empty>}
+      <form className="row" onSubmit={add} style={{ marginTop: 12 }}>
+        <input className="input" style={{ width: 200 }} placeholder="Nomi (masalan IELTS)" value={name} onChange={(e) => setName(e.target.value)} />
+        <input className="input" style={{ width: 200 }} placeholder="Kalit so'zlar (vergul bilan)" value={keywords} onChange={(e) => setKeywords(e.target.value)} />
+        <input className="input tnum" style={{ width: 160 }} placeholder="Oylik narx, so'm" inputMode="numeric" value={price} onChange={(e) => setPrice(e.target.value)} />
+        <button className="btn sm primary" type="submit">
+          <Icon name="plus" size={14} /> Qo'shish
+        </button>
+      </form>
     </div>
   );
 }
