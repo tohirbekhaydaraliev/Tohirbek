@@ -1,0 +1,56 @@
+# Yo'ldosh AI + PostgreSQL (+ ixtiyoriy HTTPS, Caddy orqali)
+#
+#   cp .env.example .env                              # kalitlar va DOMAIN ni to'ldiring
+#   docker compose --profile https up -d --build      # production: https://$DOMAIN
+#   docker compose up -d --build                      # HTTPS'siz: faqat serverning o'zida http://127.0.0.1:8787
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://yoldosh:${POSTGRES_PASSWORD:-yoldosh}@db:5432/yoldosh
+      PORT: '8787'
+      PUBLIC_URL: ${PUBLIC_URL:-https://${DOMAIN:-localhost}}
+    ports:
+      # Sukut bo'yicha tashqaridan yopiq; tashqi kirish Caddy (https profili) orqali
+      - '${APP_BIND:-127.0.0.1}:8787:8787'
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: yoldosh
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-yoldosh}
+      POSTGRES_DB: yoldosh
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U yoldosh']
+      interval: 5s
+      retries: 10
+
+  caddy:
+    image: caddy:2
+    profiles: ['https']
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:
